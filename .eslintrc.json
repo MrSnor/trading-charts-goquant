@@ -1,3 +1,25 @@
 {
-  "extends": "next/core-web-vitals"
+  "extends": [
+    "next/core-web-vitals"
+  ],
+  "rules": {
+    "no-undef": [
+      "error",
+      {
+        "typeof": false
+      }
+    ],
+    "no-empty-function": [
+      "error",
+      {
+        "allow": null
+      }
+    ],
+    "no-duplicate-imports": [
+      "error",
+      {
+        "includeExports": false
+      }
+    ]
+  }
 }
