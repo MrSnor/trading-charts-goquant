@@ -1,6 +1,7 @@
 import CandleSticks from "@/components/CandleSticks";
 import Loader from "@/components/Loader";
 import VolumeBarChart from "@/components/VolumeBarChart";
+import CombinedChart from "@/components/CombinedChart";
 import { useCallback, useEffect, useState } from "react";
 
 function Home() {
@@ -69,6 +70,11 @@ function Home() {
         <Loader />
       ) : (
         <div className="space-y-10">
+          <h2 className="text-2xl font-bold mt-8 mb-4">Combined Chart</h2>
+          <CombinedChart
+            candleData={candleData}
+            volumeData={volumeData}
+          />
           <h2 className="text-2xl font-bold mt-8 mb-4">Candle Stick Chart</h2>
           <CandleSticks data={candleData} />
 
