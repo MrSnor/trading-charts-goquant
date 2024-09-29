@@ -70,16 +70,26 @@ function Home() {
         <Loader />
       ) : (
         <div className="space-y-10">
-          <h2 className="text-2xl font-bold mt-8 mb-4">Combined Chart</h2>
-          <CombinedChart
-            candleData={candleData}
-            volumeData={volumeData}
-          />
-          <h2 className="text-2xl font-bold mt-8 mb-4">Candle Stick Chart</h2>
-          <CandleSticks data={candleData} />
+          <div className="">
+            <h2 className="text-2xl font-bold mt-8 mb-4">Combined Chart</h2>
+            <CombinedChart candleData={candleData} volumeData={volumeData} />
+          </div>
+          <div>
+            <h2 className="text-2xl font-bold mt-8 mb-4">Candle Stick Chart</h2>
+            <p className="text-gray-600">
+              This chart has the{" "}
+              <span className="bg-orange-300 px-1 text-black ">
+                Bollinger Bands
+              </span>{" "}
+              added.
+            </p>
+            <CandleSticks data={candleData} />
+          </div>
 
-          <h2 className="text-2xl font-bold mt-8 mb-4">Volume Bar Chart</h2>
-          <VolumeBarChart data={volumeData} priceData={candleData} />
+          <div className="">
+            <h2 className="text-2xl font-bold mt-8 mb-4">Volume Bar Chart</h2>
+            <VolumeBarChart data={volumeData} priceData={candleData} />
+          </div>
         </div>
       )}
     </div>

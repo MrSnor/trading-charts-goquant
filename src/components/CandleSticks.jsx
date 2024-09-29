@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Icon } from "@iconify/react";
 import { createChart } from "lightweight-charts";
+import { calculateBollingerBands } from "@/utils";
 
 const UPCOLOR = "#089981";
 const DOWNCOLOR = "#F23645";
@@ -10,6 +11,8 @@ const CandleSticks = ({ data }) => {
   const chartRef = useRef(null);
   const [currentOHLC, setCurrentOHLC] = useState(null);
   const [defaultOHLC, setDefaultOHLC] = useState(null);
+  const bollingerBandsRef = useRef(null);
+  const [showBollingerBands, setShowBollingerBands] = useState(true);
 
   useEffect(() => {
     const handleResize = () => {
@@ -57,6 +60,56 @@ const CandleSticks = ({ data }) => {
       // set candle stick data
       candlestickSeries.setData(data);
 
+      // get bollinger bands
+      const bollingerBandsData = calculateBollingerBands(data);
+
+      // set bollinger bands to series
+      const upperBandSeries = chart.addLineSeries({
+        color: "rgba(0, 128, 255, 0.6)",
+        lineWidth: 1,
+        lastPriceAnimation: 1,
+      });
+
+      const middleBandSeries = chart.addLineSeries({
+        color: "rgba(128, 128, 128, 0.7)",
+        lineWidth: 1,
+        lastPriceAnimation: 1,
+      });
+
+      const lowerBandSeries = chart.addLineSeries({
+        color: "rgba(0, 128, 255, 0.6)",
+        lineWidth: 1,
+        lastPriceAnimation: 1,
+      });
+
+      // set data for bollinger bands
+      // (filtering out null values was 
+      // necessary for it to draw the charts without error)
+      upperBandSeries.setData(
+        bollingerBandsData
+          .filter((d) => d.upper !== null)
+          .map((d) => ({ time: d.time, value: d.upper }))
+      );
+
+      middleBandSeries.setData(
+        bollingerBandsData
+          .filter((d) => d.middle !== null)
+          .map((d) => ({ time: d.time, value: d.middle }))
+      );
+
+      lowerBandSeries.setData(
+        bollingerBandsData
+          .filter((d) => d.lower !== null)
+          .map((d) => ({ time: d.time, value: d.lower }))
+      );
+
+      // set ref to the band series
+      bollingerBandsRef.current = [
+        upperBandSeries,
+        middleBandSeries,
+        lowerBandSeries,
+      ];
+
       // get recent most data value
       const lastDataPoint = data[data.length - 1];
       setDefaultOHLC(lastDataPoint);
@@ -90,11 +143,26 @@ const CandleSticks = ({ data }) => {
     }
   }, [data]);
 
+  // visibility of bollinger bands
+  useEffect(() => {
+    if (bollingerBandsRef.current) {
+      bollingerBandsRef.current.forEach((series) => {
+        series.applyOptions({
+          visible: showBollingerBands,
+        });
+      });
+    }
+  }, [showBollingerBands]);
+
   // resets the view of chart
   const resetView = () => {
     if (chartRef.current) {
       chartRef.current.timeScale().fitContent();
     }
+  };
+
+  const toggleBollingerBands = () => {
+    setShowBollingerBands((prev) => !prev);
   };
 
   // OHLC color such that it gets the
@@ -134,13 +202,26 @@ const CandleSticks = ({ data }) => {
         ref={chartContainerRef}
         className="w-full border border-slate-300 rounded-sm overflow-hidden cursor-pointer"
       />
-      <button
-        onClick={resetView}
-        className="candles-reset absolute top-16 sm:top-14 left-2 bg-slate-700 hover:bg-slate-600 text-white p-1 rounded z-10"
-        title="Reset View"
-      >
-        <Icon icon="mdi:refresh" className="w-4 h-4" />
-      </button>
+      <div className="absolute top-16 sm:top-14 left-2 flex gap-2">
+        <button
+          onClick={resetView}
+          className="candles-reset  bg-slate-700 hover:bg-slate-600 text-white p-1 rounded z-10"
+          title="Reset View"
+        >
+          <Icon icon="mdi:refresh" className="w-4 h-4" />
+        </button>
+        <button
+          onClick={toggleBollingerBands}
+          className={`right-10 p-1 rounded z-10 ${
+            showBollingerBands
+              ? "bg-blue-500 hover:bg-blue-600"
+              : "bg-slate-700 hover:bg-slate-600"
+          } text-white`}
+          title="Toggle Bollinger Bands"
+        >
+          <Icon icon="iconoir:spiral" className="w-4 h-4" />
+        </button>
+      </div>
     </div>
   );
 };
