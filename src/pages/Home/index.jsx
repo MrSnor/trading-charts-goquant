@@ -1,10 +1,12 @@
 import CandleSticks from "@/components/CandleSticks";
 import Loader from "@/components/Loader";
+import VolumeBarChart from "@/components/VolumeBarChart";
 import { useCallback, useEffect, useState } from "react";
 
 function Home() {
   const [interval, setInterval] = useState("1d");
   const [candleData, setCandleData] = useState([]);
+  const [volumeData, setVolumeData] = useState([]);
   const [loading, setLoading] = useState(true);
 
   const fetchData = useCallback(async () => {
@@ -24,7 +26,12 @@ function Home() {
         close: parseFloat(d[4]),
       }));
 
+      const formattedVolumeData = data.map((d) => {
+        return [parseInt(d[0]), parseFloat(d[5])];
+      });
+
       setCandleData(formattedCandleData);
+      setVolumeData(formattedVolumeData);
     } catch (error) {
       console.error("Error fetching data:", error);
     }
@@ -64,6 +71,9 @@ function Home() {
         <div className="space-y-10">
           <h2 className="text-2xl font-bold mt-8 mb-4">Candle Stick Chart</h2>
           <CandleSticks data={candleData} />
+
+          <h2 className="text-2xl font-bold mt-8 mb-4">Volume Bar Chart</h2>
+          <VolumeBarChart data={volumeData} priceData={candleData} />
         </div>
       )}
     </div>
