@@ -98,7 +98,8 @@ function VolumeBarChart({ data, priceData }) {
       />
       <button
         onClick={resetView}
-        className="volume-reset absolute top-0 left-0 bg-slate-700 hover:bg-slate-600 text-white p-1 rounded z-10"
+        className="volume-reset absolute top-2 left-2 bg-slate-700 hover:bg-slate-600 text-white p-1 rounded z-10"
+        title="Reset View"
       >
         <Icon icon="mdi:refresh" className="w-4 h-4" />
       </button>

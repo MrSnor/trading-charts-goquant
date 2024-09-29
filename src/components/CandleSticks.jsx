@@ -137,6 +137,7 @@ const CandleSticks = ({ data }) => {
       <button
         onClick={resetView}
         className="candles-reset absolute top-16 sm:top-14 left-2 bg-slate-700 hover:bg-slate-600 text-white p-1 rounded z-10"
+        title="Reset View"
       >
         <Icon icon="mdi:refresh" className="w-4 h-4" />
       </button>
