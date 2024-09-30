@@ -46,6 +46,10 @@ function Home() {
   return (
     <div className="container mx-auto px-4 py-8">
       <h1 className="text-3xl font-bold mb-4 text-center">Trading Charts</h1>
+      <p className="mb-4 text-center">
+        These charts show BTC-USD price information, similarly other symbols can
+        be added.
+      </p>
       <div className="mb-4 flex justify-center space-x-4">
         <select
           value={interval}
