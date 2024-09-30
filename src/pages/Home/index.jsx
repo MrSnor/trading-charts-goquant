@@ -44,7 +44,7 @@ function Home() {
   }, [fetchData]);
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="container max-w-6xl mx-auto px-4 py-8">
       <h1 className="text-3xl font-bold mb-4 text-center">Trading Charts</h1>
       <p className="mb-4 text-center">
         These charts show BTC-USD price information, similarly other symbols can
