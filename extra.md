@@ -2,9 +2,11 @@
 
 ## Binance API usage
 
-- https://binance-docs.github.io/apidocs/spot/en/#kline-candlestick-data
+- <https://binance-docs.github.io/apidocs/spot/en/#kline-candlestick-data>
 
-- https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=1h&limit=30
+- Base URL - <https://api.binance.com/api/v3/klines>
+
+- <https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=1h&limit=30>
 
 response structure -
 
@@ -26,3 +28,28 @@ response structure -
   ]
 ]
 ```
+
+## Bollinger Bands
+
+show the volatility of a stock based on Standard Deviation around a Simple Moving Average. The bands widen when volatility increases and narrow when volatility decreases.
+
+Calculation
+
+Bollinger Bands have 3 lines. The middle line is just the Simple Moving Average.
+
+The Upper is calculated as SMA + (Standard Deviation * Number of Deviations).
+
+The Lower is calculated as SMA - (Standard Deviation * Number of Deviations).
+
+The default Period for the SMA and SD is 20 and the default Number of Deviations is 2.
+
+- Base URL - <https://api.binance.com/api/v3/klines>
+
+## Fibonacci Retracement
+
+A Fibonacci retracement tool is a technical analysis tool that helps traders identify potential support and resistance levels in an asset's price action. It works by drawing horizontal lines on a chart based on the Fibonacci sequence of numbers:
+
+- Draw a trend line: Connect two extreme points on a chart with a trend line.
+
+- Divide the vertical distance: Divide the vertical distance between the two points by the Fibonacci ratios of 23.6%, 38.2%, 50%, 61.8%, and 100%.
+- Draw horizontal lines: Draw horizontal lines at each of the Fibonacci levels to indicate potential support and resistance levels.
