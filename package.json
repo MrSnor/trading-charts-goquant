@@ -11,6 +11,7 @@
   "dependencies": {
     "@headlessui/react": "^2.1.8",
     "@iconify/react": "^5.0.2",
+    "fancy-canvas": "^2.1.0",
     "lightweight-charts": "^4.2.0",
     "next": "14.2.13",
     "react": "^18",
