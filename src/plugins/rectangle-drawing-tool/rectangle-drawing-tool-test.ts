@@ -86,12 +86,12 @@ class RectanglePaneRenderer implements ISeriesPrimitivePaneRenderer {
       ctx.setLineDash([15, 5]);
       ctx.beginPath();
       ctx.moveTo(
-        horizontalPositions.position,
-        verticalPositions.position + verticalDistance
+        this._p1.x * scope.horizontalPixelRatio,
+        this._p1.y * scope.verticalPixelRatio
       );
       ctx.lineTo(
-        horizontalPositions.position + horizontalPositions.length,
-        verticalPositions.position
+        this._p2.x * scope.horizontalPixelRatio,
+        this._p2.y * scope.verticalPixelRatio
       );
       ctx.stroke();
       ctx.closePath();
