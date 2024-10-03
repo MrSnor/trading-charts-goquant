@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { Icon } from "@iconify/react";
 import { createChart } from "lightweight-charts";
 import { calculateBollingerBands } from "@/utils";
+import { RectangleDrawingTool } from "@/plugins/rectangle-drawing-tool/rectangle-drawing-tool-test";
 
 const UPCOLOR = "#089981";
 const DOWNCOLOR = "#F23645";
@@ -13,6 +14,7 @@ const CandleSticks = ({ data }) => {
   const [defaultOHLC, setDefaultOHLC] = useState(null);
   const bollingerBandsRef = useRef(null);
   const [showBollingerBands, setShowBollingerBands] = useState(true);
+  const recBtnRef = useRef();
 
   useEffect(() => {
     const handleResize = () => {
@@ -83,7 +85,7 @@ const CandleSticks = ({ data }) => {
       });
 
       // set data for bollinger bands
-      // (filtering out null values was 
+      // (filtering out null values was
       // necessary for it to draw the charts without error)
       upperBandSeries.setData(
         bollingerBandsData
@@ -135,6 +137,11 @@ const CandleSticks = ({ data }) => {
 
       window.addEventListener("resize", handleResize);
       handleResize();
+
+      // use RectangleDrawingTool
+      if (recBtnRef.current ) {
+        new RectangleDrawingTool(chart, candlestickSeries, recBtnRef.current);
+      }
 
       return () => {
         window.removeEventListener("resize", handleResize);
@@ -202,7 +209,11 @@ const CandleSticks = ({ data }) => {
         ref={chartContainerRef}
         className="w-full border border-slate-300 rounded-sm overflow-hidden cursor-pointer"
       />
-      <div className="absolute top-16 sm:top-14 left-2 flex gap-2">
+      <div
+        className="absolute top-16 sm:top-14 left-2 flex gap-2 p-1 rounded-sm z-10 bg-zinc-200"
+        id="toolbar"
+      >
+        <button ref={recBtnRef} className="aspect-square"></button>
         <button
           onClick={resetView}
           className="candles-reset  bg-slate-700 hover:bg-slate-600 text-white p-1 rounded z-10"
