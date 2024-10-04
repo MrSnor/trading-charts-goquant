@@ -2,8 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { Icon } from "@iconify/react";
 import { createChart } from "lightweight-charts";
 import { calculateBollingerBands } from "@/utils";
-import { RectangleDrawingTool } from "@/plugins/rectangle-drawing-tool/rectangle-drawing-tool-test";
-
+import FibonacciTool from "@/plugins/rectangle-drawing-tool/FibonacciTool";
 const UPCOLOR = "#089981";
 const DOWNCOLOR = "#F23645";
 
@@ -14,7 +13,7 @@ const CandleSticks = ({ data }) => {
   const [defaultOHLC, setDefaultOHLC] = useState(null);
   const bollingerBandsRef = useRef(null);
   const [showBollingerBands, setShowBollingerBands] = useState(true);
-  const recBtnRef = useRef();
+  const [candlestickSeries, setCandlestickSeries] = useState(null); // State for candlestick series
 
   useEffect(() => {
     const handleResize = () => {
@@ -28,7 +27,7 @@ const CandleSticks = ({ data }) => {
     if (data.length > 0 && chartContainerRef.current) {
       // initialize chart
       const chart = createChart(chartContainerRef.current, {
-        height: 300,
+        height: 500,
         layout: {
           fontFamily: "system-ui, sans-serif",
           background: { type: "solid", color: "white" },
@@ -50,7 +49,7 @@ const CandleSticks = ({ data }) => {
       });
 
       // initialize candle stick series
-      const candlestickSeries = chart.addCandlestickSeries({
+      const series = chart.addCandlestickSeries({
         upColor: UPCOLOR,
         downColor: DOWNCOLOR,
         borderUpColor: UPCOLOR,
@@ -60,7 +59,8 @@ const CandleSticks = ({ data }) => {
       });
 
       // set candle stick data
-      candlestickSeries.setData(data);
+      series.setData(data);
+      setCandlestickSeries(series); // Store the series in state
 
       // get bollinger bands
       const bollingerBandsData = calculateBollingerBands(data);
@@ -120,7 +120,7 @@ const CandleSticks = ({ data }) => {
       // update OHLC values on cursor move
       chart.subscribeCrosshairMove((param) => {
         if (param.point) {
-          const dataPoint = param.seriesData.get(candlestickSeries);
+          const dataPoint = param.seriesData.get(series);
           if (dataPoint) {
             setCurrentOHLC(dataPoint);
           }
@@ -138,11 +138,6 @@ const CandleSticks = ({ data }) => {
       window.addEventListener("resize", handleResize);
       handleResize();
 
-      // use RectangleDrawingTool
-      if (recBtnRef.current ) {
-        new RectangleDrawingTool(chart, candlestickSeries, recBtnRef.current);
-      }
-
       return () => {
         window.removeEventListener("resize", handleResize);
         chart.remove();
@@ -151,6 +146,7 @@ const CandleSticks = ({ data }) => {
   }, [data]);
 
   // visibility of bollinger bands
+
   useEffect(() => {
     if (bollingerBandsRef.current) {
       bollingerBandsRef.current.forEach((series) => {
@@ -209,14 +205,14 @@ const CandleSticks = ({ data }) => {
         ref={chartContainerRef}
         className="w-full border border-slate-300 rounded-sm overflow-hidden cursor-pointer"
       />
-      <div
-        className="absolute top-16 sm:top-14 left-2 flex gap-2 p-1 rounded-sm z-10 bg-zinc-200"
-        id="toolbar"
-      >
-        <button ref={recBtnRef} className="aspect-square"></button>
+
+      <div className="absolute top-16 sm:top-14 left-2 flex gap-2 p-1 rounded-sm z-10 bg-zinc-200">
+        {chartRef.current && candlestickSeries && (
+          <FibonacciTool chart={chartRef.current} series={candlestickSeries} />
+        )}
         <button
           onClick={resetView}
-          className="candles-reset  bg-slate-700 hover:bg-slate-600 text-white p-1 rounded z-10"
+          className="candles-reset bg-slate-700 hover:bg-slate-600 text-white p-1 rounded z-10"
           title="Reset View"
         >
           <Icon icon="mdi:refresh" className="w-4 h-4" />
