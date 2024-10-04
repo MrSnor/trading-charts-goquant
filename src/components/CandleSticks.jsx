@@ -12,7 +12,7 @@ const CandleSticks = ({ data }) => {
   const [currentOHLC, setCurrentOHLC] = useState(null);
   const [defaultOHLC, setDefaultOHLC] = useState(null);
   const bollingerBandsRef = useRef(null);
-  const [showBollingerBands, setShowBollingerBands] = useState(true);
+  const [showBollingerBands, setShowBollingerBands] = useState(false);
   const [candlestickSeries, setCandlestickSeries] = useState(null); // State for candlestick series
 
   useEffect(() => {
@@ -111,6 +111,15 @@ const CandleSticks = ({ data }) => {
         middleBandSeries,
         lowerBandSeries,
       ];
+
+      // set initial visibility of bollinger bands
+      if (bollingerBandsRef.current) {
+        bollingerBandsRef.current.forEach((series) => {
+          series.applyOptions({
+            visible: showBollingerBands,
+          });
+        });
+      }
 
       // get recent most data value
       const lastDataPoint = data[data.length - 1];
