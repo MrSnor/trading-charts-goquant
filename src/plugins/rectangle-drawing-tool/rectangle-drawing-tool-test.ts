@@ -20,11 +20,18 @@ class RectanglePaneRenderer implements ISeriesPrimitivePaneRenderer {
   _p1: ViewPoint;
   _p2: ViewPoint;
   _fillColor: string;
+  _isDragging: boolean;
 
-  constructor(p1: ViewPoint, p2: ViewPoint, fillColor: string) {
+  constructor(
+    p1: ViewPoint,
+    p2: ViewPoint,
+    fillColor: string,
+    isDragging: boolean
+  ) {
     this._p1 = p1;
     this._p2 = p2;
     this._fillColor = fillColor;
+    this._isDragging = isDragging;
   }
 
   draw(target: CanvasRenderingTarget2D) {
@@ -144,6 +151,27 @@ class RectanglePaneRenderer implements ISeriesPrimitivePaneRenderer {
           yPosition + 3
         );
       });
+
+      // Add border when dragging
+      if (this._isDragging) {
+        ctx.strokeStyle = "rgb(0, 0, 255)"; // White border for dragging
+        ctx.lineWidth = 4;
+        ctx.strokeRect(
+          this._p1.x * scope.horizontalPixelRatio,
+          this._p1.y * scope.verticalPixelRatio,
+          (this._p2.x - this._p1.x) * scope.horizontalPixelRatio,
+          (this._p2.y - this._p1.y) * scope.verticalPixelRatio
+        );
+
+        ctx.strokeStyle = "rgb(255, 255, 255)"; // Blue border for dragging
+        ctx.lineWidth = 2;
+        ctx.strokeRect(
+          this._p1.x * scope.horizontalPixelRatio,
+          this._p1.y * scope.verticalPixelRatio,
+          (this._p2.x - this._p1.x) * scope.horizontalPixelRatio,
+          (this._p2.y - this._p1.y) * scope.verticalPixelRatio
+        );
+      }
     });
   }
 }
@@ -191,7 +219,8 @@ class RectanglePaneView implements ISeriesPrimitivePaneView {
     return new RectanglePaneRenderer(
       this._p1,
       this._p2,
-      this._source._options.fillColor
+      this._source._options.fillColor,
+      this._source.isDragging
     );
   }
 }
@@ -378,6 +407,10 @@ class Rectangle extends PluginBase {
   _priceAxisPaneViews: RectanglePriceAxisPaneView[];
   _timeAxisPaneViews: RectangleTimeAxisPaneView[];
 
+  // drag/resize
+  isSelected: boolean = false;
+  isDragging: boolean = false;
+
   constructor(
     p1: Point,
     p2: Point,
@@ -435,6 +468,14 @@ class Rectangle extends PluginBase {
     this._options = { ...this._options, ...options };
     this.requestUpdate();
   }
+
+  move(deltaTime: number, deltaPrice: number) {
+    this._p1.time = Number(this._p1.time) + deltaTime;
+    this._p2.time = Number(this._p2.time) + deltaTime;
+    this._p1.price += deltaPrice;
+    this._p2.price += deltaPrice;
+    this.updateAllViews();
+  }
 }
 
 class PreviewRectangle extends Rectangle {
@@ -467,6 +508,11 @@ export class RectangleDrawingTool {
   private _drawing: boolean = false;
   private _toolbarButton: HTMLDivElement | undefined;
 
+  // New properties for editing
+  private _selectedRectangle: Rectangle | null = null;
+  private _isDragging: boolean = false;
+  private _dragStartPoint: Point | null = null;
+
   constructor(
     chart: IChartApi,
     series: ISeriesApi<SeriesType>,
@@ -482,9 +528,6 @@ export class RectangleDrawingTool {
     this._chart.subscribeClick(this._clickHandler);
     this._chart.subscribeCrosshairMove(this._moveHandler);
   }
-
-  private _clickHandler = (param: MouseEventParams) => this._onClick(param);
-  private _moveHandler = (param: MouseEventParams) => this._onMouseMove(param);
 
   remove() {
     this.stopDrawing();
@@ -522,32 +565,6 @@ export class RectangleDrawingTool {
     return this._drawing;
   }
 
-  private _onClick(param: MouseEventParams) {
-    if (!this._drawing || !param.point || !param.time || !this._series) return;
-    const price = this._series.coordinateToPrice(param.point.y);
-    if (price === null) {
-      return;
-    }
-    this._addPoint({
-      time: param.time,
-      price,
-    });
-  }
-
-  private _onMouseMove(param: MouseEventParams) {
-    if (!this._drawing || !param.point || !param.time || !this._series) return;
-    const price = this._series.coordinateToPrice(param.point.y);
-    if (price === null) {
-      return;
-    }
-    if (this._previewRectangle) {
-      this._previewRectangle.updateEndPoint({
-        time: param.time,
-        price,
-      });
-    }
-  }
-
   private _addPoint(p: Point) {
     this._points.push(p);
     if (this._points.length >= 2) {
@@ -581,6 +598,139 @@ export class RectangleDrawingTool {
     if (this._previewRectangle) {
       ensureDefined(this._series).detachPrimitive(this._previewRectangle);
       this._previewRectangle = undefined;
+    }
+  }
+
+  private _updatePreviewRectangle(p: Point) {
+    if (this._previewRectangle) {
+      this._previewRectangle.updateEndPoint(p);
+    }
+  }
+
+  // function to get clicked rectangle
+  private _getClickedRectangle(point: Point): Rectangle | null {
+    for (const rectangle of this._rectangles) {
+      // time isn't converted to coordinates for some reason, so using Number() as a workaround
+      const pointTimeCordinate = Number(point.time);
+      const pointPriceCordinate = this._series?.priceToCoordinate(point.price);
+
+      const p1TimeCordinate = Number(rectangle._p1.time);
+      const p1PriceCordinate = this._series?.priceToCoordinate(
+        rectangle._p1.price
+      );
+
+      const p2TimeCordinate = Number(rectangle._p2.time);
+      const p2PriceCordinate = this._series?.priceToCoordinate(
+        rectangle._p2.price
+      );
+
+      const isWithinXRange =
+        pointTimeCordinate >= Math.min(p1TimeCordinate, p2TimeCordinate) &&
+        pointTimeCordinate <= Math.max(p1TimeCordinate, p2TimeCordinate);
+      const isWithinYRange =
+        pointPriceCordinate >= Math.min(p1PriceCordinate, p2PriceCordinate) &&
+        pointPriceCordinate <= Math.max(p1PriceCordinate, p2PriceCordinate);
+
+      if (isWithinXRange && isWithinYRange) {
+        return rectangle; // Return the clicked rectangle
+      }
+    }
+    return null; // No rectangle was clicked
+  }
+
+  private _clickHandler = (param: MouseEventParams) => {
+    if (!param.point || !param.time || !this._series) return;
+
+    const price = this._series.coordinateToPrice(param.point.y);
+    if (price === null) return;
+
+    const clickPoint: Point = { time: param.time, price };
+
+    if (this._drawing) {
+      this._addPoint(clickPoint);
+    } else {
+      const clickedRectangle = this._getClickedRectangle(clickPoint);
+      if (clickedRectangle) {
+        if (this._isDragging) {
+          // End dragging on second click
+          this._isDragging = false;
+          this._dragStartPoint = null;
+          clickedRectangle.isDragging = false;
+          this._updateCursor(clickPoint);
+        } else {
+          // Start dragging on first click
+          this._selectRectangle(clickedRectangle);
+          this._isDragging = true;
+          this._dragStartPoint = clickPoint;
+          clickedRectangle.isDragging = true;
+        }
+      } else {
+        this._deselectRectangle();
+      }
+    }
+  };
+
+  private _moveHandler = (param: MouseEventParams) => {
+    if (!param.point || !param.time || !this._series) return;
+
+    const price = this._series.coordinateToPrice(param.point.y);
+    if (price === null) return;
+
+    const currentPoint: Point = { time: param.time, price };
+
+    if (this._drawing) {
+      this._updatePreviewRectangle(currentPoint);
+    } else if (
+      this._selectedRectangle &&
+      this._isDragging &&
+      this._dragStartPoint
+    ) {
+      this._dragRectangle(currentPoint);
+    }
+
+    this._updateCursor(currentPoint);
+  };
+
+  private _dragRectangle(currentPoint: Point) {
+    if (!this._selectedRectangle || !this._dragStartPoint) return;
+
+    const deltaTime =
+      Number(currentPoint.time) - Number(this._dragStartPoint.time);
+    const deltaPrice = currentPoint.price - this._dragStartPoint.price;
+
+    this._selectedRectangle.move(deltaTime, deltaPrice);
+    this._dragStartPoint = currentPoint;
+
+    // Request an update to redraw the chart
+    this._chart?.applyOptions({});
+  }
+
+  private _updateCursor(point: Point) {
+    const clickedRectangle = this._getClickedRectangle(point);
+
+    if (clickedRectangle) {
+      if (this._isDragging) {
+        document.body.style.cursor = "grabbing";
+      } else {
+        document.body.style.cursor = "grab";
+      }
+    } else {
+      document.body.style.cursor = "default";
+    }
+  }
+
+  private _selectRectangle(rectangle: Rectangle) {
+    if (this._selectedRectangle) {
+      this._selectedRectangle.isSelected = false;
+    }
+    this._selectedRectangle = rectangle;
+    this._selectedRectangle.isSelected = true;
+  }
+
+  private _deselectRectangle() {
+    if (this._selectedRectangle) {
+      this._selectedRectangle.isSelected = false;
+      this._selectedRectangle = null;
     }
   }
 
