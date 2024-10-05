@@ -1,4 +1,7 @@
-import { CanvasRenderingTarget2D } from "fancy-canvas";
+import {
+  BitmapCoordinatesRenderingScope,
+  CanvasRenderingTarget2D,
+} from "fancy-canvas";
 import {
   Coordinate,
   IChartApi,
@@ -21,17 +24,20 @@ class RectanglePaneRenderer implements ISeriesPrimitivePaneRenderer {
   _p2: ViewPoint;
   _fillColor: string;
   _isDragging: boolean;
+  _isSelected: boolean;
 
   constructor(
     p1: ViewPoint,
     p2: ViewPoint,
     fillColor: string,
-    isDragging: boolean
+    isDragging: boolean,
+    isSelected: boolean
   ) {
     this._p1 = p1;
     this._p2 = p2;
     this._fillColor = fillColor;
     this._isDragging = isDragging;
+    this._isSelected = isSelected;
   }
 
   draw(target: CanvasRenderingTarget2D) {
@@ -155,16 +161,7 @@ class RectanglePaneRenderer implements ISeriesPrimitivePaneRenderer {
       // Add border when dragging
       if (this._isDragging) {
         ctx.strokeStyle = "rgb(0, 0, 255)"; // White border for dragging
-        ctx.lineWidth = 4;
-        ctx.strokeRect(
-          this._p1.x * scope.horizontalPixelRatio,
-          this._p1.y * scope.verticalPixelRatio,
-          (this._p2.x - this._p1.x) * scope.horizontalPixelRatio,
-          (this._p2.y - this._p1.y) * scope.verticalPixelRatio
-        );
-
-        ctx.strokeStyle = "rgb(255, 255, 255)"; // Blue border for dragging
-        ctx.lineWidth = 2;
+        ctx.lineWidth = 2.5;
         ctx.strokeRect(
           this._p1.x * scope.horizontalPixelRatio,
           this._p1.y * scope.verticalPixelRatio,
@@ -172,6 +169,41 @@ class RectanglePaneRenderer implements ISeriesPrimitivePaneRenderer {
           (this._p2.y - this._p1.y) * scope.verticalPixelRatio
         );
       }
+
+      // Draw corner handles when selected
+      if (this._isSelected) {
+        this._drawCornerHandles(ctx, scope);
+      }
+    });
+  }
+
+  private _drawCornerHandles(
+    ctx: CanvasRenderingContext2D,
+    scope: BitmapCoordinatesRenderingScope
+  ) {
+    const handleSize = 8;
+    const corners = [
+      { x: this._p1.x, y: this._p1.y },
+      { x: this._p2.x, y: this._p1.y },
+      { x: this._p1.x, y: this._p2.y },
+      { x: this._p2.x, y: this._p2.y },
+    ];
+
+    ctx.fillStyle = "white";
+    ctx.strokeStyle = "black";
+    ctx.lineWidth = 1;
+
+    corners.forEach((corner) => {
+      ctx.beginPath();
+      ctx.arc(
+        corner.x * scope.horizontalPixelRatio,
+        corner.y * scope.verticalPixelRatio,
+        handleSize,
+        0,
+        2 * Math.PI
+      );
+      ctx.fill();
+      ctx.stroke();
     });
   }
 }
@@ -220,7 +252,8 @@ class RectanglePaneView implements ISeriesPrimitivePaneView {
       this._p1,
       this._p2,
       this._source._options.fillColor,
-      this._source.isDragging
+      this._source.isDragging,
+      this._source.isSelected
     );
   }
 }
@@ -609,7 +642,9 @@ export class RectangleDrawingTool {
 
   // function to get clicked rectangle
   private _getClickedRectangle(point: Point): Rectangle | null {
-    for (const rectangle of this._rectangles) {
+    // rectangles ordered by last created first
+    const rectangles = [...this._rectangles].reverse();
+    for (const rectangle of rectangles) {
       // time isn't converted to coordinates for some reason, so using Number() as a workaround
       const pointTimeCordinate = Number(point.time);
       const pointPriceCordinate = this._series?.priceToCoordinate(point.price);
@@ -657,6 +692,7 @@ export class RectangleDrawingTool {
           this._dragStartPoint = null;
           clickedRectangle.isDragging = false;
           this._updateCursor(clickPoint);
+          this._deselectRectangle();
         } else {
           // Start dragging on first click
           this._selectRectangle(clickedRectangle);
