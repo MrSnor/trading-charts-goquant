@@ -212,7 +212,7 @@ const CandleSticks = ({ data }) => {
       )}
       <div
         ref={chartContainerRef}
-        className="w-full border border-slate-300 rounded-sm overflow-hidden cursor-pointer"
+        className="w-full border border-slate-300 rounded-sm"
       />
 
       <div className="absolute top-16 sm:top-14 left-2 flex gap-2 p-1 rounded-sm z-10 bg-zinc-200">
