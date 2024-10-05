@@ -750,6 +750,8 @@ export class RectangleDrawingTool {
       } else {
         document.body.style.cursor = "grab";
       }
+    } else if (this._drawing) {
+      document.body.style.cursor = "crosshair";
     } else {
       document.body.style.cursor = "default";
     }
