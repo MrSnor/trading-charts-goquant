@@ -3,7 +3,7 @@ import React, { useEffect, useRef } from "react";
 import {
   RectangleDrawingTool,
   RectangleDrawingToolOptions,
-} from "./rectangle-drawing-tool-test";
+} from "@/plugins/rectangle-drawing-tool/fibonacci-rectangle-tool";
 
 interface RectangleDrawingToolProps {
   chart: IChartApi;

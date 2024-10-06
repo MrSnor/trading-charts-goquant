@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { Icon } from "@iconify/react";
 import { createChart } from "lightweight-charts";
 import { calculateBollingerBands } from "@/utils";
-import FibonacciTool from "@/plugins/rectangle-drawing-tool/FibonacciTool";
+import FibonacciTool from "@/components/FibonacciTool";
 const UPCOLOR = "#089981";
 const DOWNCOLOR = "#F23645";
 

@@ -99,7 +99,7 @@ showing the resize handles and then being able to resize the rectangle~~
 - ~~change rectangle hover cursor to pointer~~
   - ~~if hovering over a selected rectangle, show grab cursor~~
 
-- rename to FibonacciRectangleTool.ts
+- ~~rename to FibonacciRectangleTool.ts~~
 
 - ~~axis labels aren't updated while resizing~~
 
