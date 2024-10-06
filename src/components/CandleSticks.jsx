@@ -45,6 +45,12 @@ const CandleSticks = ({ data }) => {
           borderColor: "#334155",
           timeVisible: true,
           secondsVisible: false,
+          fixLeftEdge: true,
+          fixRightEdge: true,
+        },
+        handleScroll: {
+          pressedMouseMove: false,
+          horzTouchDragging: false,
         },
       });
 
