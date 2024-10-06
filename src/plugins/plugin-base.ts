@@ -14,7 +14,9 @@ export abstract class PluginBase implements ISeriesPrimitive<Time> {
 	private _series: ISeriesApi<keyof SeriesOptionsMap> | undefined = undefined;
 
 	protected dataUpdated?(scope: DataChangedScope): void;
-	protected requestUpdate(): void {
+	// changing accessibility from protected to public to enable usage in other classes
+	// (helps to update state/variables without lag)
+	public requestUpdate(): void {
 		if (this._requestUpdate) this._requestUpdate();
 	}
 	private _requestUpdate?: () => void;

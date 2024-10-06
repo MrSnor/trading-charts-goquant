@@ -558,15 +558,20 @@ export class RectangleDrawingTool {
     this._addToolbarButton();
     this._defaultOptions = options;
     this._rectangles = [];
+
+    // listen to events
     this._chart.subscribeClick(this._clickHandler);
     this._chart.subscribeCrosshairMove(this._moveHandler);
+    this._chart.subscribeDblClick(this._dblClickHandler);
   }
 
   remove() {
     this.stopDrawing();
     if (this._chart) {
+      // remove event listeners
       this._chart.unsubscribeClick(this._clickHandler);
       this._chart.unsubscribeCrosshairMove(this._moveHandler);
+      this._chart.unsubscribeDblClick(this._dblClickHandler);
     }
     this._rectangles.forEach((rectangle) => {
       this._removeRectangle(rectangle);
@@ -687,22 +692,33 @@ export class RectangleDrawingTool {
       const clickedRectangle = this._getClickedRectangle(clickPoint);
       if (clickedRectangle) {
         if (this._isDragging) {
-          // End dragging on second click
+          // End dragging on single click
           this._isDragging = false;
           this._dragStartPoint = null;
           clickedRectangle.isDragging = false;
-          this._updateCursor(clickPoint);
-          this._deselectRectangle();
         } else {
-          // Start dragging on first click
+          // Select rectangle if not already dragging
           this._selectRectangle(clickedRectangle);
-          this._isDragging = true;
-          this._dragStartPoint = clickPoint;
-          clickedRectangle.isDragging = true;
         }
       } else {
         this._deselectRectangle();
       }
+    }
+
+    this._updateCursor(clickPoint);
+  };
+
+  private _dblClickHandler = (param: MouseEventParams) => {
+    if (!param.point || !param.time || !this._series) return;
+
+    const price = this._series.coordinateToPrice(param.point.y);
+    if (price === null) return;
+
+    const clickPoint: Point = { time: param.time, price };
+
+    const clickedRectangle = this._getClickedRectangle(clickPoint);
+    if (clickedRectangle && this._selectedRectangle === clickedRectangle) {
+      this._startDragging(clickPoint);
     }
   };
 
@@ -717,8 +733,8 @@ export class RectangleDrawingTool {
     if (this._drawing) {
       this._updatePreviewRectangle(currentPoint);
     } else if (
-      this._selectedRectangle &&
       this._isDragging &&
+      this._selectedRectangle &&
       this._dragStartPoint
     ) {
       this._dragRectangle(currentPoint);
@@ -726,6 +742,15 @@ export class RectangleDrawingTool {
 
     this._updateCursor(currentPoint);
   };
+
+  private _startDragging(point: Point) {
+    if (this._selectedRectangle) {
+      this._isDragging = true;
+      this._dragStartPoint = point;
+      this._selectedRectangle.isDragging = true;
+      this._updateCursor(point);
+    }
+  }
 
   private _dragRectangle(currentPoint: Point) {
     if (!this._selectedRectangle || !this._dragStartPoint) return;
@@ -737,24 +762,24 @@ export class RectangleDrawingTool {
     this._selectedRectangle.move(deltaTime, deltaPrice);
     this._dragStartPoint = currentPoint;
 
-    // Request an update to redraw the chart
     this._chart?.applyOptions({});
   }
 
   private _updateCursor(point: Point) {
     const clickedRectangle = this._getClickedRectangle(point);
+    let cursorStyle = "default";
 
     if (clickedRectangle) {
       if (this._isDragging) {
-        document.body.style.cursor = "grabbing";
+        cursorStyle = "grabbing";
+      } else if (this._selectedRectangle === clickedRectangle) {
+        cursorStyle = "grab";
       } else {
-        document.body.style.cursor = "grab";
+        cursorStyle = "pointer";
       }
-    } else if (this._drawing) {
-      document.body.style.cursor = "crosshair";
-    } else {
-      document.body.style.cursor = "default";
     }
+
+    document.body.style.cursor = cursorStyle;
   }
 
   private _selectRectangle(rectangle: Rectangle) {
@@ -763,11 +788,13 @@ export class RectangleDrawingTool {
     }
     this._selectedRectangle = rectangle;
     this._selectedRectangle.isSelected = true;
+    this._selectedRectangle.requestUpdate();
   }
 
   private _deselectRectangle() {
     if (this._selectedRectangle) {
       this._selectedRectangle.isSelected = false;
+      this._selectedRectangle.requestUpdate();
       this._selectedRectangle = null;
     }
   }
