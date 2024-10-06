@@ -41,6 +41,17 @@ This project showcases some Trading Charts in React.
     pnpm run dev
     ```
 
+## Instructions to use Fibonacci Retracement Tool
+
+1. Click on the tool icon to activate the tool.
+1. Click anywhere on the chart to **start drawing**, then click on the chart again to stop drawing. (No need need to hold the button down)
+    - To deactivate the tool before drawing, click on the tool icon again
+1. Click on the diagrams drawn to **resize or delete** them.
+
+    - If you've clicked on a diagram once, you can simply click on it again to enable **moving it**.
+
+1. **To move** the diagrams, double click on them, move the mouse and click again to finish the move. (No need need to hold the button down)
+
 ## ScreenShots
 
 1. Candlestick Charts
