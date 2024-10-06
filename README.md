@@ -11,7 +11,7 @@ This project showcases some Trading Charts in React.
 1. **Bollinger Bands**:  
     - [x] Include Bollinger Bands as an additional indicator on the candlestick chart.
 1. **Fibonacci Retracement Tool**:  
-    - [ ] Add a feature that allows users to draw Fibonacci retracement levels directly on the chart.
+    - [x] Add a feature that allows users to draw Fibonacci retracement levels directly on the chart.
 1. **Responsive Design**:  
     - [x] Ensure the charting module is responsive and user-friendly across a wide range of screen sizes, from mobile devices to desktops.
 
