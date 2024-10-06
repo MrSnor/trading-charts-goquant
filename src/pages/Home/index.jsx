@@ -83,7 +83,7 @@ function Home() {
             <p className="text-gray-600">
               This chart has the{" "}
               <span className="bg-orange-300 px-1 text-black ">
-                Bollinger Bands
+                Bollinger Bands and Fibonacci Retracement Tool
               </span>{" "}
               added.
             </p>

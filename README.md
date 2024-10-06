@@ -40,3 +40,16 @@ This project showcases some Trading Charts in React.
     ``` bash
     pnpm run dev
     ```
+
+## ScreenShots
+
+1. Candlestick Charts
+ ![Candlestick Chart](public/images/candle_chart.png)
+1. Volume Bar Charts
+ ![Volume Bar Chart](public/images/volume_chart.png)
+1. Combined Charts
+ ![Combined Chart](public/images/combined_chart.png)
+1. Bollinger Bands
+ ![Bollinger Bands](public/images/bollinger_bands.png)
+1. Fibonacci Retracement Tool
+ ![Fibonacci Retracement Tool](public/images/fibonacci_retracement_tool.png)
