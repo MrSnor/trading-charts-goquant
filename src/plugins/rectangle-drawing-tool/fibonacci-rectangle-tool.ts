@@ -1179,7 +1179,13 @@ export class RectangleDrawingTool {
     const button = document.createElement("div");
     button.style.width = "20px";
     button.style.height = "20px";
-    button.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><path d="M315.4 15.5C309.7 5.9 299.2 0 288 0s-21.7 5.9-27.4 15.5l-96 160c-5.9 9.9-6.1 22.2-.4 32.2s16.3 16.2 27.8 16.2H384c11.5 0 22.2-6.2 27.8-16.2s5.5-22.3-.4-32.2l-96-160zM288 312V456c0 22.1 17.9 40 40 40H472c22.1 0 40-17.9 40-40V312c0-22.1-17.9-40-40-40H328c-22.1 0-40 17.9-40 40zM128 512a128 128 0 1 0 0-256 128 128 0 1 0 0 256z"/></svg>`;
+    button.style.paddingLeft = "5px"
+    button.style.paddingTop = "2px"
+    button.style.cursor = "pointer";
+    button.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 512 512">
+	<rect width="512" height="512" fill="none" />
+	<path d="M136.6 138.79a64 64 0 0 0-43.31 41.35L0 460l14.69 14.69L164.8 324.58c-2.99-6.26-4.8-13.18-4.8-20.58c0-26.51 21.49-48 48-48s48 21.49 48 48s-21.49 48-48 48c-7.4 0-14.32-1.81-20.58-4.8L37.31 497.31L52 512l279.86-93.29a64 64 0 0 0 41.35-43.31L416 224L288 96zm361.34-64.62l-60.11-60.11c-18.75-18.75-49.16-18.75-67.91 0l-56.55 56.55l128.02 128.02l56.55-56.55c18.75-18.75 18.75-49.15 0-67.91" />
+</svg>`;
     button.addEventListener("click", () => {
       if (this.isDrawing()) {
         this.stopDrawing();
@@ -1189,20 +1195,22 @@ export class RectangleDrawingTool {
     });
     this._drawingsToolbarContainer.appendChild(button);
     this._toolbarButton = button;
-    const colorPicker = document.createElement("input");
-    colorPicker.type = "color";
-    colorPicker.value = "#C83264";
-    colorPicker.style.width = "24px";
-    colorPicker.style.height = "20px";
-    colorPicker.style.border = "none";
-    colorPicker.style.padding = "0px";
-    colorPicker.style.backgroundColor = "transparent";
-    colorPicker.addEventListener("change", () => {
-      const newColor = colorPicker.value;
-      this._defaultOptions.fillColor = newColor + "CC";
-      this._defaultOptions.previewFillColor = newColor + "77";
-      this._defaultOptions.labelColor = newColor;
-    });
-    this._drawingsToolbarContainer.appendChild(colorPicker);
+
+    // disable color picker
+    // const colorPicker = document.createElement("input");
+    // colorPicker.type = "color";
+    // colorPicker.value = "#C83264";
+    // colorPicker.style.width = "24px";
+    // colorPicker.style.height = "20px";
+    // colorPicker.style.border = "none";
+    // colorPicker.style.padding = "0px";
+    // colorPicker.style.backgroundColor = "transparent";
+    // colorPicker.addEventListener("change", () => {
+    //   const newColor = colorPicker.value;
+    //   this._defaultOptions.fillColor = newColor + "CC";
+    //   this._defaultOptions.previewFillColor = newColor + "77";
+    //   this._defaultOptions.labelColor = newColor;
+    // });
+    // this._drawingsToolbarContainer.appendChild(colorPicker);
   }
 }
