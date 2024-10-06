@@ -25,6 +25,7 @@ class RectanglePaneRenderer implements ISeriesPrimitivePaneRenderer {
   _fillColor: string;
   _isDragging: boolean;
   _isSelected: boolean;
+  private readonly _shadowPadding = 20; // Padding for the shadow area
 
   constructor(
     p1: ViewPoint,
@@ -174,6 +175,23 @@ class RectanglePaneRenderer implements ISeriesPrimitivePaneRenderer {
       if (this._isSelected) {
         this._drawCornerHandles(ctx, scope);
       }
+
+      // Draw delete button when selected
+      if (this._isSelected) {
+        this._drawDeleteButton(ctx, scope);
+      }
+
+      // Draw invisible shadow area
+      ctx.beginPath();
+      ctx.rect(
+        (this._p1.x - this._shadowPadding) * scope.horizontalPixelRatio,
+        (this._p1.y - this._shadowPadding) * scope.verticalPixelRatio,
+        (this._p2.x - this._p1.x + 2 * this._shadowPadding) *
+          scope.horizontalPixelRatio,
+        (this._p2.y - this._p1.y + 2 * this._shadowPadding) *
+          scope.verticalPixelRatio
+      );
+      // Don't fill or stroke, just use for hit detection
     });
   }
 
@@ -205,6 +223,40 @@ class RectanglePaneRenderer implements ISeriesPrimitivePaneRenderer {
       ctx.fill();
       ctx.stroke();
     });
+  }
+
+  private _drawDeleteButton(
+    ctx: CanvasRenderingContext2D,
+    scope: BitmapCoordinatesRenderingScope
+  ) {
+    const buttonSize = 20;
+    const buttonX =
+      (this._p1.x + (this._p2.x - this._p1.x) / 2) *
+        scope.horizontalPixelRatio -
+      buttonSize / 2;
+    const buttonY = this._p1.y * scope.verticalPixelRatio - buttonSize - 5;
+
+    // Draw circle background
+    ctx.beginPath();
+    ctx.arc(
+      buttonX + buttonSize / 2,
+      buttonY + buttonSize / 2,
+      buttonSize / 2,
+      0,
+      2 * Math.PI
+    );
+    ctx.fillStyle = "rgba(255, 0, 0, 0.7)";
+    ctx.fill();
+
+    // Draw X
+    ctx.strokeStyle = "white";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(buttonX + 5, buttonY + 5);
+    ctx.lineTo(buttonX + buttonSize - 5, buttonY + buttonSize - 5);
+    ctx.moveTo(buttonX + buttonSize - 5, buttonY + 5);
+    ctx.lineTo(buttonX + 5, buttonY + buttonSize - 5);
+    ctx.stroke();
   }
 }
 
@@ -647,35 +699,48 @@ export class RectangleDrawingTool {
 
   // function to get clicked rectangle
   private _getClickedRectangle(point: Point): Rectangle | null {
-    // rectangles ordered by last created first
     const rectangles = [...this._rectangles].reverse();
     for (const rectangle of rectangles) {
-      // time isn't converted to coordinates for some reason, so using Number() as a workaround
       const pointTimeCordinate = Number(point.time);
       const pointPriceCordinate = this._series?.priceToCoordinate(point.price);
-
       const p1TimeCordinate = Number(rectangle._p1.time);
       const p1PriceCordinate = this._series?.priceToCoordinate(
         rectangle._p1.price
       );
-
       const p2TimeCordinate = Number(rectangle._p2.time);
       const p2PriceCordinate = this._series?.priceToCoordinate(
         rectangle._p2.price
       );
 
+      if (
+        p1PriceCordinate === null ||
+        p2PriceCordinate === null ||
+        pointPriceCordinate === null
+      )
+        continue;
+
+      // Same as in RectanglePaneRenderer
+      // Note - (bug) this should be 0 to not select a rectangle on clicking its shadow area
+      // but then the delete button is not working
+      const shadowPadding = 20;
+
       const isWithinXRange =
-        pointTimeCordinate >= Math.min(p1TimeCordinate, p2TimeCordinate) &&
-        pointTimeCordinate <= Math.max(p1TimeCordinate, p2TimeCordinate);
+        pointTimeCordinate >=
+          Math.min(p1TimeCordinate, p2TimeCordinate) - shadowPadding &&
+        pointTimeCordinate <=
+          Math.max(p1TimeCordinate, p2TimeCordinate) + shadowPadding;
+
       const isWithinYRange =
-        pointPriceCordinate >= Math.min(p1PriceCordinate, p2PriceCordinate) &&
-        pointPriceCordinate <= Math.max(p1PriceCordinate, p2PriceCordinate);
+        pointPriceCordinate >=
+          Math.min(p1PriceCordinate, p2PriceCordinate) - shadowPadding &&
+        pointPriceCordinate <=
+          Math.max(p1PriceCordinate, p2PriceCordinate) + shadowPadding;
 
       if (isWithinXRange && isWithinYRange) {
-        return rectangle; // Return the clicked rectangle
+        return rectangle;
       }
     }
-    return null; // No rectangle was clicked
+    return null;
   }
 
   private _clickHandler = (param: MouseEventParams) => {
@@ -688,25 +753,61 @@ export class RectangleDrawingTool {
 
     if (this._drawing) {
       this._addPoint(clickPoint);
-    } else {
-      const clickedRectangle = this._getClickedRectangle(clickPoint);
-      if (clickedRectangle) {
-        if (this._isDragging) {
-          // End dragging on single click
-          this._isDragging = false;
-          this._dragStartPoint = null;
-          clickedRectangle.isDragging = false;
-        } else {
-          // Select rectangle if not already dragging
-          this._selectRectangle(clickedRectangle);
-        }
+      return;
+    }
+
+    const clickedRectangle = this._getClickedRectangle(clickPoint);
+
+    if (clickedRectangle) {
+      if (this.isCursorOnDeleteButton(clickPoint, clickedRectangle)) {
+        // Delete rectangle
+        this._deleteRectangle(clickedRectangle);
+      } else if (this._isDragging) {
+        // End dragging
+        this._endDragging();
       } else {
-        this._deselectRectangle();
+        // Start dragging or select rectangle
+        this._handleRectangleClick(clickedRectangle, clickPoint);
       }
+    } else {
+      // Click outside any rectangle
+      this._deselectRectangle();
+      this._endDragging(); // Ensure dragging ends even if released outside
     }
 
     this._updateCursor(clickPoint);
   };
+
+  // Note - this needs to be modified to handle shadow area (maybe)
+  private _isClickInsideRectangle(point: Point, rectangle: Rectangle): boolean {
+    const pointTimeCordinate = Number(point.time);
+    const pointPriceCordinate = this._series?.priceToCoordinate(point.price);
+    const p1TimeCordinate = Number(rectangle._p1.time);
+    const p1PriceCordinate = this._series?.priceToCoordinate(
+      rectangle._p1.price
+    );
+    const p2TimeCordinate = Number(rectangle._p2.time);
+    const p2PriceCordinate = this._series?.priceToCoordinate(
+      rectangle._p2.price
+    );
+
+    if (
+      p1PriceCordinate === null ||
+      p2PriceCordinate === null ||
+      pointPriceCordinate === null
+    )
+      return false;
+
+    const isWithinXRange =
+      pointTimeCordinate >= Math.min(p1TimeCordinate, p2TimeCordinate) &&
+      pointTimeCordinate <= Math.max(p1TimeCordinate, p2TimeCordinate);
+
+    const isWithinYRange =
+      pointPriceCordinate >= Math.min(p1PriceCordinate, p2PriceCordinate) &&
+      pointPriceCordinate <= Math.max(p1PriceCordinate, p2PriceCordinate);
+
+    return isWithinXRange && isWithinYRange;
+  }
 
   private _dblClickHandler = (param: MouseEventParams) => {
     if (!param.point || !param.time || !this._series) return;
@@ -748,8 +849,16 @@ export class RectangleDrawingTool {
       this._isDragging = true;
       this._dragStartPoint = point;
       this._selectedRectangle.isDragging = true;
-      this._updateCursor(point);
     }
+  }
+
+  private _endDragging() {
+    this._isDragging = false;
+    this._dragStartPoint = null;
+    if (this._selectedRectangle) {
+      this._selectedRectangle.isDragging = false;
+    }
+    this._chart?.applyOptions({}); // Trigger a chart update
   }
 
   private _dragRectangle(currentPoint: Point) {
@@ -765,18 +874,37 @@ export class RectangleDrawingTool {
     this._chart?.applyOptions({});
   }
 
+  private _handleRectangleClick(rectangle: Rectangle, clickPoint: Point) {
+    if (this._selectedRectangle === rectangle) {
+      // If already selected, start dragging
+      this._startDragging(clickPoint);
+    } else {
+      // Select the rectangle
+      this._selectRectangle(rectangle);
+    }
+  }
+
   private _updateCursor(point: Point) {
     const clickedRectangle = this._getClickedRectangle(point);
     let cursorStyle = "default";
 
     if (clickedRectangle) {
-      if (this._isDragging) {
+      if (this.isCursorOnDeleteButton(point, clickedRectangle)) {
+        cursorStyle = "pointer";
+      } else if (this._isDragging) {
         cursorStyle = "grabbing";
-      } else if (this._selectedRectangle === clickedRectangle) {
+      } else if (
+        this._selectedRectangle === clickedRectangle &&
+        this._isClickInsideRectangle(point, clickedRectangle)
+      ) {
         cursorStyle = "grab";
+      } else if (!this._isClickInsideRectangle(point, clickedRectangle)) {
+        cursorStyle = "default";
       } else {
         cursorStyle = "pointer";
       }
+    } else if (this._drawing) {
+      cursorStyle = "crosshair";
     }
 
     document.body.style.cursor = cursorStyle;
@@ -796,6 +924,49 @@ export class RectangleDrawingTool {
       this._selectedRectangle.isSelected = false;
       this._selectedRectangle.requestUpdate();
       this._selectedRectangle = null;
+    }
+  }
+
+  private isCursorOnDeleteButton(
+    cursorPoint: Point,
+    rectangle: Rectangle
+  ): boolean {
+    const buttonSize = 20;
+    const hitAreaSize = 30; // Larger hit area for easier clicking
+    const timeScale = this._chart!.timeScale();
+    const series = this._series;
+
+    if (!series) return false;
+
+    const rectX1 = timeScale.timeToCoordinate!(rectangle._p1.time);
+    const rectX2 = timeScale.timeToCoordinate!(rectangle._p2.time);
+    const rectY1 = series.priceToCoordinate!(rectangle._p1.price);
+
+    if (rectX1 === null || rectX2 === null || rectY1 === null) return false;
+
+    const buttonCenterX = (rectX1 + rectX2) / 2;
+    const buttonCenterY = rectY1 - buttonSize / 2 - 5;
+
+    const cursorX = timeScale.timeToCoordinate!(cursorPoint.time);
+    const cursorY = series.priceToCoordinate!(cursorPoint.price);
+
+    if (cursorX === null || cursorY === null) return false;
+
+    const distance = Math.sqrt(
+      Math.pow(cursorX - buttonCenterX, 2) +
+        Math.pow(cursorY - buttonCenterY, 2)
+    );
+
+    return distance <= hitAreaSize / 2;
+  }
+
+  private _deleteRectangle(rectangle: Rectangle) {
+    const index = this._rectangles.indexOf(rectangle);
+    if (index !== -1) {
+      this._rectangles.splice(index, 1);
+      this._removeRectangle(rectangle);
+      this._deselectRectangle();
+      this._chart!.applyOptions({});
     }
   }
 
