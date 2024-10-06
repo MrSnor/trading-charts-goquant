@@ -4,5 +4,9 @@
     "paths": {
       "@/*": ["./src/*"]
     },
+    "module": "ES6",
+    // "target": "ES6",
+    "lib": [ "dom", "ESNext"],
+    "moduleResolution": "Bundler"
   }
 }

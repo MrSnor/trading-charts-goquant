@@ -199,24 +199,42 @@ class RectanglePaneRenderer implements ISeriesPrimitivePaneRenderer {
     ctx: CanvasRenderingContext2D,
     scope: BitmapCoordinatesRenderingScope
   ) {
-    const handleSize = 8;
+    const handleSize = 20;
+    const handleOffset = 5;
+
+    const minX = Math.min(this._p1.x, this._p2.x);
+    const maxX = Math.max(this._p1.x, this._p2.x);
+    const minY = Math.min(this._p1.y, this._p2.y);
+    const maxY = Math.max(this._p1.y, this._p2.y);
+
     const corners = [
-      { x: this._p1.x, y: this._p1.y },
-      { x: this._p2.x, y: this._p1.y },
-      { x: this._p1.x, y: this._p2.y },
-      { x: this._p2.x, y: this._p2.y },
+      { x: minX, y: minY, handle: "topLeft" },
+      { x: maxX, y: minY, handle: "topRight" },
+      { x: minX, y: maxY, handle: "bottomLeft" },
+      { x: maxX, y: maxY, handle: "bottomRight" },
     ];
 
     ctx.fillStyle = "white";
     ctx.strokeStyle = "black";
-    ctx.lineWidth = 1;
+    ctx.lineWidth = 2;
 
-    corners.forEach((corner) => {
+    corners.forEach(({ x, y, handle }) => {
+      let offsetX = handle.toLowerCase().includes("right")
+        ? handleOffset
+        : -handleOffset;
+      let offsetY = handle.toLowerCase().includes("bottom")
+        ? handleOffset
+        : -handleOffset;
+
+      const handleX =
+        (x + offsetX) * scope.horizontalPixelRatio - handleSize / 2;
+      const handleY = (y + offsetY) * scope.verticalPixelRatio - handleSize / 2;
+
       ctx.beginPath();
       ctx.arc(
-        corner.x * scope.horizontalPixelRatio,
-        corner.y * scope.verticalPixelRatio,
-        handleSize,
+        handleX + handleSize / 2,
+        handleY + handleSize / 2,
+        handleSize / 2,
         0,
         2 * Math.PI
       );
@@ -495,6 +513,7 @@ class Rectangle extends PluginBase {
   // drag/resize
   isSelected: boolean = false;
   isDragging: boolean = false;
+  isResizing: boolean = false;
 
   constructor(
     p1: Point,
@@ -523,10 +542,10 @@ class Rectangle extends PluginBase {
 
   updateAllViews() {
     this._paneViews.forEach((pw) => pw.update());
-    this._timeAxisViews.forEach((pw) => pw.update());
-    this._priceAxisViews.forEach((pw) => pw.update());
-    this._priceAxisPaneViews.forEach((pw) => pw.update());
-    this._timeAxisPaneViews.forEach((pw) => pw.update());
+    this._timeAxisViews.forEach((tav) => tav.update());
+    this._priceAxisViews.forEach((pav) => pav.update());
+    this._priceAxisPaneViews.forEach((papv) => papv.update());
+    this._timeAxisPaneViews.forEach((tapv) => tapv.update());
   }
 
   priceAxisViews() {
@@ -555,8 +574,8 @@ class Rectangle extends PluginBase {
   }
 
   move(deltaTime: number, deltaPrice: number) {
-    this._p1.time = Number(this._p1.time) + deltaTime;
-    this._p2.time = Number(this._p2.time) + deltaTime;
+    this._p1.time = (Number(this._p1.time) + deltaTime) as Time;
+    this._p2.time = (Number(this._p2.time) + deltaTime) as Time;
     this._p1.price += deltaPrice;
     this._p2.price += deltaPrice;
     this.updateAllViews();
@@ -597,6 +616,7 @@ export class RectangleDrawingTool {
   private _selectedRectangle: Rectangle | null = null;
   private _isDragging: boolean = false;
   private _dragStartPoint: Point | null = null;
+  private _resizingHandle: string | null = null;
 
   constructor(
     chart: IChartApi,
@@ -757,26 +777,129 @@ export class RectangleDrawingTool {
     }
 
     const clickedRectangle = this._getClickedRectangle(clickPoint);
-
     if (clickedRectangle) {
       if (this.isCursorOnDeleteButton(clickPoint, clickedRectangle)) {
-        // Delete rectangle
         this._deleteRectangle(clickedRectangle);
-      } else if (this._isDragging) {
-        // End dragging
-        this._endDragging();
       } else {
-        // Start dragging or select rectangle
-        this._handleRectangleClick(clickedRectangle, clickPoint);
+        const handle = this._getClickedResizeHandle(
+          clickPoint,
+          clickedRectangle
+        );
+        if (handle) {
+          if (this._resizingHandle) {
+            this._endResizing();
+          } else {
+            this._resizingHandle = handle;
+            this._startResizing(clickPoint);
+          }
+        } else {
+          this._handleRectangleClick(clickedRectangle, clickPoint);
+        }
       }
     } else {
-      // Click outside any rectangle
       this._deselectRectangle();
-      this._endDragging(); // Ensure dragging ends even if released outside
+      this._endResizing();
+      this._endDragging();
     }
 
     this._updateCursor(clickPoint);
   };
+
+  private _getClickedResizeHandle(
+    point: Point,
+    rectangle: Rectangle
+  ): string | null {
+    // Only check resize handles if the rectangle is selected
+    if (!rectangle.isSelected) {
+      return null;
+    }
+
+    const handles = ["topLeft", "topRight", "bottomLeft", "bottomRight"];
+    const timeScale = this._chart!.timeScale();
+    const series = this._series!;
+    const handleSize = 20;
+    const shadowPadding = 20; // Same as the shadow area padding
+
+    for (const handle of handles) {
+      const handlePoint = this._getHandlePoint(rectangle, handle);
+      const handleX = timeScale.timeToCoordinate!(handlePoint.time);
+      const handleY = series.priceToCoordinate!(handlePoint.price);
+
+      if (handleX === null || handleY === null) continue;
+
+      let minX, maxX, minY, maxY;
+
+      switch (handle) {
+        case "topLeft":
+          minX = handleX - shadowPadding;
+          maxX = handleX + handleSize;
+          minY = handleY - shadowPadding;
+          maxY = handleY + handleSize;
+          break;
+        case "topRight":
+          minX = handleX - handleSize;
+          maxX = handleX + shadowPadding;
+          minY = handleY - shadowPadding;
+          maxY = handleY + handleSize;
+          break;
+        case "bottomLeft":
+          minX = handleX - shadowPadding;
+          maxX = handleX + handleSize;
+          minY = handleY - handleSize;
+          maxY = handleY + shadowPadding;
+          break;
+        case "bottomRight":
+          minX = handleX - handleSize;
+          maxX = handleX + shadowPadding;
+          minY = handleY - handleSize;
+          maxY = handleY + shadowPadding;
+          break;
+      }
+
+      const pointX = timeScale.timeToCoordinate!(point.time);
+      const pointY = series.priceToCoordinate!(point.price);
+
+      if (pointX === null || pointY === null) continue;
+
+      if (
+        pointX >= minX &&
+        pointX <= maxX &&
+        pointY >= minY &&
+        pointY <= maxY
+      ) {
+        return handle;
+      }
+    }
+
+    return null;
+  }
+
+  private _getHandlePoint(rectangle: Rectangle, handle: string): Point {
+    switch (handle) {
+      case "topLeft":
+        return {
+          time: rectangle._p1.time,
+          price: Math.max(rectangle._p1.price, rectangle._p2.price),
+        };
+      case "topRight":
+        return {
+          time: rectangle._p2.time,
+          price: Math.max(rectangle._p1.price, rectangle._p2.price),
+        };
+      case "bottomLeft":
+        return {
+          time: rectangle._p1.time,
+          price: Math.min(rectangle._p1.price, rectangle._p2.price),
+        };
+      case "bottomRight":
+        return {
+          time: rectangle._p2.time,
+          price: Math.min(rectangle._p1.price, rectangle._p2.price),
+        };
+      default:
+        throw new Error("Invalid handle");
+    }
+  }
 
   // Note - this needs to be modified to handle shadow area (maybe)
   private _isClickInsideRectangle(point: Point, rectangle: Rectangle): boolean {
@@ -818,8 +941,13 @@ export class RectangleDrawingTool {
     const clickPoint: Point = { time: param.time, price };
 
     const clickedRectangle = this._getClickedRectangle(clickPoint);
-    if (clickedRectangle && this._selectedRectangle === clickedRectangle) {
-      this._startDragging(clickPoint);
+    if (clickedRectangle) {
+      if (this._isDragging) {
+        this._endDragging();
+      } else {
+        this._startDragging(clickPoint);
+      }
+      this._endResizing(); // Ensure resizing is ended when we start/end dragging
     }
   };
 
@@ -833,6 +961,8 @@ export class RectangleDrawingTool {
 
     if (this._drawing) {
       this._updatePreviewRectangle(currentPoint);
+    } else if (this._resizingHandle && this._selectedRectangle) {
+      this._resizeRectangle(currentPoint);
     } else if (
       this._isDragging &&
       this._selectedRectangle &&
@@ -843,6 +973,59 @@ export class RectangleDrawingTool {
 
     this._updateCursor(currentPoint);
   };
+
+  private _resizeRectangle(currentPoint: Point) {
+    if (!this._selectedRectangle || !this._resizingHandle) return;
+
+    const rectangle = this._selectedRectangle;
+    const handle = this._resizingHandle;
+
+    let newP1 = rectangle._p1;
+    let newP2 = rectangle._p2;
+
+    switch (handle) {
+      case "topLeft":
+        newP1.price = currentPoint.price;
+        newP1.time = currentPoint.time;
+        break;
+      case "topRight":
+        newP1.price = currentPoint.price;
+        newP2.time = currentPoint.time;
+        break;
+      case "bottomLeft":
+        newP1.time = currentPoint.time;
+        newP2.price = currentPoint.price;
+        break;
+      case "bottomRight":
+        newP2.time = currentPoint.time;
+        newP2.price = currentPoint.price;
+        break;
+    }
+
+    // Update all views, including axis views
+    rectangle.updateAllViews();
+
+    // Force immediate redraw of the chart
+    this._chart?.applyOptions({});
+  }
+
+  private _startResizing(point: Point) {
+    if (this._selectedRectangle) {
+      this._resizingHandle = this._getClickedResizeHandle(
+        point,
+        this._selectedRectangle
+      );
+      this._selectedRectangle.isResizing = true;
+    }
+  }
+
+  private _endResizing() {
+    this._resizingHandle = null;
+    if (this._selectedRectangle) {
+      this._selectedRectangle.isResizing = false;
+    }
+    this._chart?.applyOptions({});
+  }
 
   private _startDragging(point: Point) {
     if (this._selectedRectangle) {
@@ -858,7 +1041,7 @@ export class RectangleDrawingTool {
     if (this._selectedRectangle) {
       this._selectedRectangle.isDragging = false;
     }
-    this._chart?.applyOptions({}); // Trigger a chart update
+    this._chart?.applyOptions({});
   }
 
   private _dragRectangle(currentPoint: Point) {
@@ -875,11 +1058,17 @@ export class RectangleDrawingTool {
   }
 
   private _handleRectangleClick(rectangle: Rectangle, clickPoint: Point) {
-    if (this._selectedRectangle === rectangle) {
-      // If already selected, start dragging
+    if (this._resizingHandle) {
+      // If we're resizing, stop the resize operation
+      this._endResizing();
+    } else if (this._isDragging) {
+      // If we're dragging, stop the drag operation
+      this._endDragging();
+    } else if (this._selectedRectangle === rectangle) {
+      // If the rectangle is already selected, start dragging
       this._startDragging(clickPoint);
     } else {
-      // Select the rectangle
+      // Otherwise, just select the rectangle
       this._selectRectangle(rectangle);
     }
   }
@@ -893,15 +1082,17 @@ export class RectangleDrawingTool {
         cursorStyle = "pointer";
       } else if (this._isDragging) {
         cursorStyle = "grabbing";
-      } else if (
-        this._selectedRectangle === clickedRectangle &&
-        this._isClickInsideRectangle(point, clickedRectangle)
-      ) {
-        cursorStyle = "grab";
-      } else if (!this._isClickInsideRectangle(point, clickedRectangle)) {
-        cursorStyle = "default";
+      } else if (this._resizingHandle) {
+        cursorStyle = this._getResizeCursor(this._resizingHandle);
       } else {
-        cursorStyle = "pointer";
+        const handle = this._getClickedResizeHandle(point, clickedRectangle);
+        if (handle) {
+          cursorStyle = this._getResizeCursor(handle);
+        } else if (this._selectedRectangle === clickedRectangle) {
+          cursorStyle = "grab";
+        } else {
+          cursorStyle = "pointer";
+        }
       }
     } else if (this._drawing) {
       cursorStyle = "crosshair";
@@ -910,20 +1101,33 @@ export class RectangleDrawingTool {
     document.body.style.cursor = cursorStyle;
   }
 
+  private _getResizeCursor(handle: string): string {
+    switch (handle) {
+      case "topLeft":
+      case "bottomRight":
+        return "nwse-resize";
+      case "topRight":
+      case "bottomLeft":
+        return "nesw-resize";
+      default:
+        return "default";
+    }
+  }
+
   private _selectRectangle(rectangle: Rectangle) {
     if (this._selectedRectangle) {
       this._selectedRectangle.isSelected = false;
     }
     this._selectedRectangle = rectangle;
     this._selectedRectangle.isSelected = true;
-    this._selectedRectangle.requestUpdate();
+    this._chart?.applyOptions({});
   }
 
   private _deselectRectangle() {
     if (this._selectedRectangle) {
       this._selectedRectangle.isSelected = false;
-      this._selectedRectangle.requestUpdate();
       this._selectedRectangle = null;
+      this._chart?.applyOptions({});
     }
   }
 

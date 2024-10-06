@@ -65,3 +65,42 @@ Source for the above example -
 - <https://github.com/tradingview/lightweight-charts/tree/master/plugin-examples/src/helpers>
 
 - <https://github.com/tradingview/lightweight-charts/tree/master/plugin-examples/src/plugins>
+
+## Explanation of Changes for editing canvas elements
+
+- Point Structure:
+  Updated references to use Point objects that have time and price properties instead of x and y.
+  
+- Getting Clicked Rectangle:
+  a method now checks whether a click falls within the bounds defined by_p1 and_p2, using their time and price.
+
+- Updating Selected Rectangle:
+  The method calculates new positions based on mouse movement while keeping track of both points.
+
+- Deleting Selected Rectangle:
+  The deleteSelectedRectangle method removes the selected rectangle from both the visual representation and internal state.
+
+- Resizing Logic:
+  Placeholder methods for resizing have been included but not fully implemented. You can expand upon these methods to allow users to resize rectangles by dragging their corners.
+
+### Steps
+
+- ~~different cursor when dragging (grab) and resizing (resize), and when hovering over the rectangle(pointer). default cursor (default cursor not the pointer) when not hovering over the rectangle or not hovering over the corner of the rectangle should be used.~~
+
+- ~~show a delete button (a cross) that can be clicked to delete the rectangle. it should be visible at the top centre of the rectangle, and it should be clickable when a rectangle is selected.~~
+
+- ~~make the resizing feature functional such that the resize handles can be dragged to resize the rectangle~~
+
+- ~~associate this._chart.subscribeDblClick with showing the border of the selected rectangle and dragging/moving it around~~
+
+- ~~associate this._chart.subscribeClick with activating selected rectangle
+showing the resize handles and then being able to resize the rectangle~~
+
+- ~~change rectangle hover cursor to pointer~~
+  - ~~if hovering over a selected rectangle, show grab cursor~~
+
+- rename to FibonacciRectangleTool.ts
+
+- ~~axis labels aren't updated while resizing~~
+
+- ~~ensure that the delete and resize buttons are only visible and clickable when their respective rectangle is selected~~
